@@ -8,8 +8,8 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 error RandomIpfsNFT__RangeOutOfBounce();
-error RandonIpfsNft__NeedMoreETHSend();
-error RandomIpfsNft__TransferFailed();
+error RandomIpfsNFT__NeedMoreETHSend();
+error RandomIpfsNFT__TransferFailed();
 
 contract RandomIpfsNFT is VRFConsumerBaseV2, ERC721URIStorage, Ownable {
     enum Breed {
@@ -57,7 +57,7 @@ contract RandomIpfsNFT is VRFConsumerBaseV2, ERC721URIStorage, Ownable {
 
     function requestNft() public payable returns (uint256 requestId) {
         if (msg.value < i_mintFee) {
-            revert RandonIpfsNft__NeedMoreETHSend();
+            revert RandomIpfsNFT__NeedMoreETHSend();
         }
 
         requestId = i_vrfCoordinator.requestRandomWords(
@@ -91,16 +91,15 @@ contract RandomIpfsNFT is VRFConsumerBaseV2, ERC721URIStorage, Ownable {
         uint256 moddedRng
     ) public pure returns (Breed) {
         uint256 cumulativeSum = 0;
-        uint256[3] memory chanceArray = getArrayChance();
-
+        uint256[3] memory chanceArray = getChanceArray();
         for (uint256 i = 0; i < chanceArray.length; i++) {
-            if (
-                moddedRng >= cumulativeSum &&
-                moddedRng < cumulativeSum + chanceArray[i]
-            ) {
+            // Pug = 0 - 9  (10%)
+            // Shiba-inu = 10 - 39  (30%)
+            // St. Bernard = 40 = 99 (60%)
+            if (moddedRng >= cumulativeSum && moddedRng < chanceArray[i]) {
                 return Breed(i);
             }
-            cumulativeSum += chanceArray[i];
+            cumulativeSum = chanceArray[i];
         }
         revert RandomIpfsNFT__RangeOutOfBounce();
     }
@@ -109,11 +108,11 @@ contract RandomIpfsNFT is VRFConsumerBaseV2, ERC721URIStorage, Ownable {
         uint256 amount = address(this).balance;
         (bool success, ) = payable(msg.sender).call{value: amount}("");
         if (!success) {
-            revert RandomIpfsNft__TransferFailed();
+            revert RandomIpfsNFT__TransferFailed();
         }
     }
 
-    function getArrayChance() public pure returns (uint256[3] memory) {
+    function getChanceArray() public pure returns (uint256[3] memory) {
         return [10, 30, MAX_CHANCE_VALUE];
     }
 
